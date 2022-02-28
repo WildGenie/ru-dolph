@@ -179,7 +179,7 @@ class ruDolphModel(torch.nn.Module):
             loss += loss_img*img_loss_weight
         if rt_loss_weight:
             loss += loss_r_text*rt_loss_weight
-        loss = loss / (lt_loss_weight + img_loss_weight + rt_loss_weight)
+        loss /= lt_loss_weight + img_loss_weight + rt_loss_weight
         outputs = (loss, {
             'l_text_loss': loss_l_text.data.detach().float(),
             'image_loss': loss_img.data.detach().float(),

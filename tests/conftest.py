@@ -27,5 +27,4 @@ def toy_model():
         vocab_size=16384+64,
         image_vocab_size=8192,
     )
-    model = ruDolphModel(device='cpu', **model_params)
-    yield model
+    yield ruDolphModel(device='cpu', **model_params)

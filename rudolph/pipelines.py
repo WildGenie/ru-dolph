@@ -29,12 +29,9 @@ def generate_codebooks(
         seed=None, use_cache=True,
 ):
     # TODO docstring
-    if seed is not None:
-        utils.seed_everything(seed)
-    else:
+    if seed is None:
         seed = int((datetime.utcnow().timestamp() * 10 ** 6) % (2 ** 32 - 1))
-        utils.seed_everything(seed)
-
+    utils.seed_everything(seed)
     vocab_size = model.get_param('vocab_size')
     l_text_seq_length = model.get_param('l_text_seq_length')
     r_text_seq_length = model.get_param('r_text_seq_length')
@@ -148,8 +145,7 @@ def generate_captions(
     texts = set()
     for tokens in generated_tokens:
         end = torch.where(tokens == 3)[0].shape[0] or tokens.shape[0]
-        text = tokenizer.decode_text(tokens[:end]).strip()
-        if text:
+        if text := tokenizer.decode_text(tokens[:end]).strip():
             texts.add(text)
 
     return list(texts)
@@ -461,8 +457,7 @@ def generate_texts(
     texts = set()
     for tokens in generated_tokens:
         end = torch.where(tokens == 3)[0].shape[0] or tokens.shape[0]
-        text = tokenizer.decode_text(tokens[:end]).strip()
-        if text:
+        if text := tokenizer.decode_text(tokens[:end]).strip():
             texts.add(text)
     texts = list(texts)
 
@@ -513,5 +508,4 @@ def generate_texts(
 def ce_to_ppl(ce):
     indexes = torch.where(ce)
     ce[indexes] = torch.exp(ce[indexes])
-    ppl = ce.sum(1) / torch.unique(indexes[0], return_counts=True)[1]
-    return ppl
+    return ce.sum(1) / torch.unique(indexes[0], return_counts=True)[1]

@@ -19,10 +19,7 @@ def gelu_jit(x):
 
 
 def rescale_max(h, scale=False):
-    if scale:
-        # This transformation does not affect following layernorm output.
-        return h / h.detach().max(dim=-1)[0].unsqueeze(-1)
-    return h
+    return h / h.detach().max(dim=-1)[0].unsqueeze(-1) if scale else h
 
 
 class Layer(torch.nn.Module):
@@ -112,14 +109,13 @@ class SparseTransformer(torch.nn.Module):
 
     def _get_layer_mask(self, layer_id):
         if ((layer_id - 1) % 4 == 0):
-            layer_mask = self.col_mask
+            return self.col_mask
         elif layer_id == self.num_layers - 1:
-            layer_mask = self.last_conv_mask
+            return self.last_conv_mask
         elif (layer_id - 3) % 4 == 0:
-            layer_mask = self.conv_mask
+            return self.conv_mask
         else:
-            layer_mask = self.row_mask
-        return layer_mask
+            return self.row_mask
 
     def forward(self, hidden_states, attention_mask, has_cache, use_cache, gradient_checkpointing=None):
         if gradient_checkpointing:
@@ -369,14 +365,9 @@ class DalleSelfAttention(torch.nn.Module):
         if use_cache and has_cache:
             key_layer = torch.cat((self.past_key, key_layer), dim=-2)
             value_layer = torch.cat((self.past_value, value_layer), dim=-2)
-            attention_scores = self._calculate_attention_scores(
-                query_layer=query_layer, key_layer=key_layer, ltor_mask=ltor_mask
-            )
-        else:
-            attention_scores = self._calculate_attention_scores(
-                query_layer=query_layer, key_layer=key_layer, ltor_mask=ltor_mask
-            )
-
+        attention_scores = self._calculate_attention_scores(
+            query_layer=query_layer, key_layer=key_layer, ltor_mask=ltor_mask
+        )
         if use_cache and has_cache:
             extra_cache_size = hidden_states.shape[-2] - self.past_key.shape[-2]
             attention_scores = attention_scores[..., -extra_cache_size:, :]
@@ -421,9 +412,7 @@ class DalleSelfAttention(torch.nn.Module):
             # Can be simplified, but I didn't for readability's sake
             if has_cache:
                 output = torch.cat((self.past_output, output), dim=-2)
-                self.past_output = output
-            else:
-                self.past_output = output
+            self.past_output = output
             has_cache = True
 
         output = self.output_dropout(output)
@@ -477,10 +466,7 @@ class DalleMLP(torch.nn.Module):
             # Can be simplified, but I didn't for readability's sake
             if has_cache:
                 x = torch.cat((self.past_x, x), dim=-2)
-                self.past_x = x
-            else:
-                self.past_x = x
-
+            self.past_x = x
             has_cache = True
         else:
             self.past_x = None
